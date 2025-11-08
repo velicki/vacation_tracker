@@ -31,6 +31,9 @@ services:
 
   web:
     build: .
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
     container_name: vacation_web
     restart: always
     depends_on:

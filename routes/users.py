@@ -7,14 +7,14 @@ from werkzeug.security import generate_password_hash
 
 users_bp = Blueprint("users", __name__)
 
-@users_bp.get("/")
+@users_bp.get("/", endpoint="list_all_users")
 @requires_admin
 def list_users():
     session = SessionLocal()
     users = session.query(Employee).all()
     return jsonify([{"id": u.id, "email": u.email, "is_admin": u.is_admin} for u in users])
 
-@users_bp.get("/me")
+@users_bp.get("/me", endpoint="my_profile")
 @requires_auth
 def get_my_profile():
     verify_jwt_in_request()
@@ -32,24 +32,8 @@ def get_my_profile():
         "is_admin": user.is_admin
     }), 200
 
-@users_bp.get("/")
-@requires_admin
-def list_users():
-    session = SessionLocal()
-    users = session.query(Employee).all()
 
-    response = [
-        {
-            "id": u.id,
-            "email": u.email,
-            "is_admin": u.is_admin
-        }
-        for u in users
-    ]
-
-    return jsonify(response), 200
-
-@users_bp.get("/users/<int:user_id>")
+@users_bp.get("/users/<int:user_id>", endpoint="get_user_by_id")
 @requires_admin
 def get_user(user_id):
 
@@ -65,7 +49,7 @@ def get_user(user_id):
         "is_admin": user.is_admin
     }), 200
 
-@users_bp.put("/users/<int:user_id>")
+@users_bp.put("/users/<int:user_id>", endpoint="update_user")
 @requires_auth
 def update_user(user_id):
     data = request.get_json()
@@ -110,7 +94,7 @@ def update_user(user_id):
         "is_admin": user.is_admin
     })
 
-@users_bp.delete("/users/<int:user_id>")
+@users_bp.delete("/users/<int:user_id>", endpoint="delete_user")
 @requires_admin
 def delete_user(user_id):
     session = SessionLocal()
@@ -133,7 +117,7 @@ def delete_user(user_id):
 
     return jsonify({"message": f"User {user.email} deleted successfully"}), 200
 
-@users_bp.post("/users")
+@users_bp.post("/users", endpoint="ladd_user")
 @requires_admin
 def create_user():
     data = request.get_json()

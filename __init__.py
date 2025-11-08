@@ -1,16 +1,17 @@
 from flask import Flask
-from db import engine
-from models import Base
+from db import engine, Base
 from flask_jwt_extended import JWTManager
 from utils.token_blacklist import blacklist
 
-from routes.auth import auth_bp
-from routes.users import users_bp
+from .routes.auth import auth_bp
+from .routes.users import users_bp
 # from routes.vacations import vacations_bp
 
 def create_app():
     app = Flask(__name__)
     app.config.from_envvar("APP_SETTINGS", silent=True)
+
+    Base.metadata.create_all(bind=engine)
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(users_bp, url_prefix="/users")

@@ -9,7 +9,7 @@ from utils.token_blacklist import blacklist
 
 auth_bp = Blueprint("auth", __name__)
 
-@auth_bp.post("/login")
+@auth_bp.post("/login", endpoint="login")
 def login():
     data = request.json
     email = data.get("email")
@@ -24,7 +24,7 @@ def login():
         token = create_access_token(identity={"id": user.id, "is_admin": user.is_admin})
         return jsonify({"access_token": token})
 
-@auth_bp.post("/register")
+@auth_bp.post("/register", endpoint="register_users")
 @requires_admin
 def register_user():
     data = request.json
@@ -53,7 +53,7 @@ def register_user():
             "is_admin": user.is_admin
         }), 201
 
-@auth_bp.post("/logout")
+@auth_bp.post("/logout", endpoint="logout")
 @requires_auth
 @jwt_required()
 def logout():
