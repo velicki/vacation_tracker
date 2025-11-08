@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from models.base import Base
+from db import Base
 
 
 class VacationTotal(Base):

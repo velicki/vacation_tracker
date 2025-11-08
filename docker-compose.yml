@@ -40,6 +40,8 @@ services:
       - .env
     ports:
       - "5000:5000"
+    volumes:
+    - ./migrations:/app/migrations
 
 volumes:
   db_data:

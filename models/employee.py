@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-from models.base import Base
+from db import Base
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -8,14 +8,8 @@ class Employee(Base):
     __tablename__ = "employees"
 
     id = Column(Integer, primary_key=True)
-
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False)
-
-    username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-
     is_admin = Column(Boolean, default=False, nullable=False)
 
     # Relationships
