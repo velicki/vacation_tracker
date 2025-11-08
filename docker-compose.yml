@@ -34,6 +34,7 @@ services:
     working_dir: /app
     environment:
       - PYTHONPATH=/app
+      - JWT_SECRET_KEY=super_tajna_rec_promeni_me
     container_name: vacation_web
     restart: always
     depends_on:

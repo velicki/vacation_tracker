@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from utils.auth import requires_auth, requires_admin
 from db import SessionLocal
 from models.employee import Employee
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, get_jwt
 from werkzeug.security import generate_password_hash
 
 users_bp = Blueprint("users", __name__)
@@ -18,7 +18,7 @@ def list_users():
 @requires_auth
 def get_my_profile():
     verify_jwt_in_request()
-    user_identity = get_jwt_identity()   # here we get dict {"id": ..., "email": ..., "is_admin": ...}
+    user_identity = get_jwt()   # here we get dict {"id": ..., "email": ..., "is_admin": ...}
 
     session = SessionLocal()
     user = session.query(Employee).filter_by(id=user_identity["id"]).first()
@@ -56,9 +56,9 @@ def update_user(user_id):
     session = SessionLocal()
 
     # Logedin user
-    current_user = get_jwt_identity()
+    current_user = get_jwt()
     current_user_id = current_user.get("id")
-    is_current_admin = current_user.get("is_admin", False)
+    is_current_admin = current_user.get("is_admin")
 
     # target user for update
     user = session.query(Employee).filter_by(id=user_id).first()
@@ -100,7 +100,7 @@ def delete_user(user_id):
     session = SessionLocal()
 
     # Logedin user
-    current_user = get_jwt_identity()
+    current_user = get_jwt()
     current_user_id = current_user.get("id")
 
     # Get target user to delete
@@ -117,7 +117,7 @@ def delete_user(user_id):
 
     return jsonify({"message": f"User {user.email} deleted successfully"}), 200
 
-@users_bp.post("/users", endpoint="ladd_user")
+@users_bp.post("/users", endpoint="add_user")
 @requires_admin
 def create_user():
     data = request.get_json()

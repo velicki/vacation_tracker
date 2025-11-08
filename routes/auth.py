@@ -6,6 +6,7 @@ from db import SessionLocal
 from models.employee import Employee
 from utils.auth import requires_admin, requires_auth
 from utils.token_blacklist import blacklist
+from datetime import timedelta
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -21,8 +22,12 @@ def login():
         if not user or not check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
-        token = create_access_token(identity={"id": user.id, "is_admin": user.is_admin})
-        return jsonify({"access_token": token})
+        token = create_access_token(
+        identity=str(user.id),
+        additional_claims={"is_admin": user.is_admin},
+        expires_delta=timedelta(hours=1)
+    )
+        return jsonify({"access_token": token}), 200
 
 @auth_bp.post("/register", endpoint="register_users")
 @requires_admin

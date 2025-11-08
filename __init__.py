@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from db import engine, Base
 from flask_jwt_extended import JWTManager
@@ -10,6 +11,7 @@ from .routes.users import users_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_envvar("APP_SETTINGS", silent=True)
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
     Base.metadata.create_all(bind=engine)
 
