@@ -1,3 +1,5 @@
+import csv
+from io import TextIOWrapper
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -59,6 +61,55 @@ def login():
 @auth_bp.post("/register", endpoint="register_users")
 @requires_admin
 def register_user():
+    # Check is there ia a file
+    file = request.files.get("file")
+
+    # CSV UPLOAD MODE
+    if file:
+        # Check file uin text mode
+        wrapped_file = TextIOWrapper(file, encoding='utf-8')
+        reader = csv.DictReader(wrapped_file)
+
+        created_count = 0
+        skipped_duplicates = 0
+
+        with SessionLocal() as session:
+            for row in reader:
+                email = row.get("Employee Email")
+                password = row.get("Employee Password")
+                is_admin_raw = row.get("is_admin", "false").strip().lower()
+
+                # Convert in boolean
+                is_admin = is_admin_raw in ["true", "1", "yes"]
+
+                if not email or not password:
+                    # Skip, not valid
+                    continue
+
+                existing = session.query(Employee).filter_by(email=email).first()
+                if existing:
+                    skipped_duplicates += 1
+                    continue
+
+                user = Employee(
+                    email=email,
+                    password_hash=generate_password_hash(password),
+                    is_admin=is_admin
+                )
+
+                session.add(user)
+                created_count += 1
+
+            session.commit()
+
+        return jsonify({
+            "message": "Bulk import completed",
+            "created": created_count,
+            "duplicates_skipped": skipped_duplicates
+        }), 201
+
+    # SINGLE USER JSON MODE
+
     data = request.json
 
     if not data.get("email") or not data.get("password"):

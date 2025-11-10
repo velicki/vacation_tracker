@@ -1,3 +1,6 @@
+import csv
+from io import TextIOWrapper
+from dateutil import parser
 from flask import Blueprint, request, jsonify
 from utils.auth import requires_admin, requires_auth
 from db import SessionLocal
@@ -38,6 +41,63 @@ vacations_bp = Blueprint("vacations", __name__)
 @vacations_bp.post("/totals")
 @requires_admin
 def create_vacation_total():
+
+    file = request.files.get("file")
+
+    # # CSV UPLOAD MODE
+    if file:
+        with SessionLocal() as session:
+            stream = TextIOWrapper(file.stream, encoding="utf-8")
+            reader = csv.reader(stream)
+
+            # First row -> take year
+            first_row = next(reader)
+            year = int(first_row[1])
+
+            # Second row -> name of colons (Employee,Total vacation days)
+            next(reader)  # skip
+
+            created = 0
+            skipped_existing = []
+            skipped_not_found = []
+
+            for row in reader:
+                email = row[0].strip()
+                try:
+                    total_days = int(row[1].strip())
+                except:
+                    continue
+
+                user = session.query(Employee).filter_by(email=email).first()
+                if not user:
+                    skipped_not_found.append(email)
+                    continue
+
+                existing = session.query(VacationTotal).filter_by(employee_id=user.id, year=year).first()
+                if existing:
+                    skipped_existing.append(email)
+                    continue
+
+                vt = VacationTotal(
+                    employee_id=user.id,
+                    year=year,
+                    total_days=total_days,
+                    total_days_left=total_days
+                )
+                session.add(vt)
+                created += 1
+
+            session.commit()
+
+            return jsonify({
+                "year": year,
+                "created": created,
+                "skipped_not_found": skipped_not_found,
+                "skipped_existing": skipped_existing
+            }), 201
+
+    # JSON MODE
+
     data = request.json
     user_id = data.get("user_id")
     year = data.get("year")
@@ -98,10 +158,107 @@ def update_vacation_total():
         }), 200
     
 
-@vacations_bp.post("/<int:user_id>/vacation-used")
+@vacations_bp.post("/vacation-used")
 @requires_admin
-def add_vacation_used(user_id):
+def add_vacation_used():
+
+    file = request.files.get("file")
+
+    # CSV UPLOAD MODE
+    
+    if file:
+        stream = TextIOWrapper(file.stream, encoding="utf-8")
+        reader = csv.reader(stream)
+
+        header = next(reader)
+
+        created = 0
+        skipped_not_found = []
+        skipped_no_total = []
+        skipped_overlap = []
+        skipped_not_enough_days = []
+
+        with SessionLocal() as session:
+            for row in reader:
+                email = row[0].strip()
+
+                try:
+                    start_date = parser.parse(row[1]).date()
+                    end_date = parser.parse(row[2]).date()
+                except:
+                    continue
+
+                if end_date < start_date:
+                    continue
+
+                user = session.query(Employee).filter_by(email=email).first()
+                if not user:
+                    skipped_not_found.append(email)
+                    continue
+
+                year = start_date.year
+                vacation_total = session.query(VacationTotal).filter_by(employee_id=user.id, year=year).first()
+                if not vacation_total:
+                    skipped_no_total.append(email)
+                    continue
+
+                # check overlap
+                existing_vacations = (
+                    session.query(VacationUsed)
+                    .filter(
+                        VacationUsed.employee_id == user.id,
+                        VacationUsed.end_date >= start_date,
+                        VacationUsed.start_date <= end_date
+                    ).all()
+                )
+
+                reject_due_to_overlap = False
+                for existing in existing_vacations:
+                    overlap_start = max(existing.start_date, start_date)
+                    overlap_end = min(existing.end_date, end_date)
+                    if overlap_start <= overlap_end:
+                        if not overlap_is_only_weekends(overlap_start, overlap_end):
+                            reject_due_to_overlap = True
+                            break
+
+                if reject_due_to_overlap:
+                    skipped_overlap.append(email)
+                    continue
+
+                days_used = calculate_workdays(start_date, end_date)
+
+                if vacation_total.total_days_left < days_used:
+                    skipped_not_enough_days.append(email)
+                    continue
+
+                new_entry = VacationUsed(
+                    start_date=start_date,
+                    end_date=end_date,
+                    days_used=days_used,
+                    employee_id=user.id
+                )
+                session.add(new_entry)
+                vacation_total.total_days_left -= days_used
+                created += 1
+
+            session.commit()
+
+        return jsonify({
+            "created": created,
+            "skipped_not_found": skipped_not_found,
+            "skipped_no_total_for_year": skipped_no_total,
+            "skipped_overlap": skipped_overlap,
+            "skipped_not_enough_days": skipped_not_enough_days
+        }), 201
+
+    
+    # JSON MODE
+
     data = request.get_json()
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
 
     try:
         start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date()
