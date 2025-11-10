@@ -9,6 +9,7 @@ class VacationTotal(Base):
     id = Column(Integer, primary_key=True)
     year = Column(Integer, nullable=False)
     total_days = Column(Integer, nullable=False)
+    total_days_left = Column(Integer, nullable=False)
 
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
     employee = relationship("Employee", back_populates="vacation_totals")

@@ -10,6 +10,33 @@ from datetime import timedelta
 
 auth_bp = Blueprint("auth", __name__)
 
+@auth_bp.post("/initialize")
+def initialize_admin():
+    session = SessionLocal()
+
+    # Check if any user already exists
+    existing_user = session.query(Employee).first()
+    if existing_user:
+        return jsonify({"error": "Setup already completed. Admin exists."}), 403
+
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+
+    admin = Employee(
+        email=email,
+        password_hash=generate_password_hash(password),
+        is_admin=True
+    )
+
+    session.add(admin)
+    session.commit()
+
+    return jsonify({"message": "Initial admin created successfully"}), 201
+
 @auth_bp.post("/login", endpoint="login")
 def login():
     data = request.json
