@@ -34,7 +34,10 @@ services:
     working_dir: /app
     environment:
       - PYTHONPATH=/app
-      - JWT_SECRET_KEY=super_tajna_rec_promeni_me
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DB_HOST=db
+      - DB_PORT=${POSTGRES_PORT}
     container_name: vacation_web
     restart: always
     depends_on:
@@ -45,7 +48,23 @@ services:
     ports:
       - "5000:5000"
     volumes:
-    - ./migrations:/app/migrations
+      - ./:/app
+      - ./migrations:/app/migrations
+      - ./entrypoint.sh:/app/entrypoint.sh
+
+  tests:
+    build: .
+    entrypoint: /app/entrypoint-tests.sh
+    command: pytest -q /app/tests
+    environment:
+      DATABASE_URL: "sqlite:///:memory:"
+      JWT_SECRET_KEY: "test-secret-key"
+      PYTHONPATH: "/app"
+    volumes:
+      - ./:/app
+
+    restart: "no"
+
 
 volumes:
   db_data:

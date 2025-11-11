@@ -13,4 +13,11 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 5000
 
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+RUN apt-get update && \
+    apt-get install -y postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN chmod +x ./entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+# CMD ["sh", "-c", "pytest -q && flask run --host=0.0.0.0 --port=5000"]
