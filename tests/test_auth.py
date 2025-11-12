@@ -47,7 +47,7 @@ def test_initialize_admin_missing_fields(test_client):
 
 
 def test_initialize_admin_already_exists(test_client):
-    # Prvo kreiramo admina ručno
+    # First create Admin
     session = SessionLocal()
     admin = Employee(email="exists@test.com", is_admin=True)
     admin.set_password("pass123")
@@ -55,7 +55,7 @@ def test_initialize_admin_already_exists(test_client):
     session.commit()
     session.close()
 
-    # Pokušavamo ponovnu inicijalizaciju
+    # Try again to initialize
     payload = {
         "email": "newadmin@test.com",
         "password": "secret"
@@ -111,7 +111,7 @@ def test_login_invalid_email(test_client):
 
 def test_login_missing_fields(test_client):
     response = test_client.post("/auth/login", json={})
-    assert response.status_code == 401  # Flask vraća 400 jer request.json.get ne daje vrednosti
+    assert response.status_code == 401 
 
 
 # ------------------------------------
@@ -190,7 +190,6 @@ def test_register_requires_admin(test_client, create_test_user, make_token):
 
 
 def test_logout_success(test_client, admin_user, test_app):
-    # Kreiramo token
     with test_app.app_context():
         token = create_access_token(
             identity=str(admin_user.id),
@@ -205,12 +204,10 @@ def test_logout_success(test_client, admin_user, test_app):
         data = response.get_json()
         assert data["msg"] == "Successfully logged out"
 
-        # Proveravamo da li je JTI dodat u blacklist
         jti = get_jti(token)
         assert jti in blacklist
 
 
 def test_logout_no_token(test_client):
-    # Ako ne pošaljemo token
     response = test_client.post("/auth/logout")
-    assert response.status_code == 401  # Unauthorized
+    assert response.status_code == 401

@@ -2,3 +2,4 @@
 echo "Running tests..."
 pytest -q /app/tests
 pytest
+pytest -v

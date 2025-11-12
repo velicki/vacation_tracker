@@ -20,4 +20,3 @@ RUN apt-get update && \
 RUN chmod +x ./entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-# CMD ["sh", "-c", "pytest -q && flask run --host=0.0.0.0 --port=5000"]

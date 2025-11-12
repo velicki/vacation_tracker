@@ -1,145 +1,33 @@
-import csv
-from io import TextIOWrapper
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from werkzeug.security import check_password_hash, generate_password_hash
-
-from db import SessionLocal
-from models.employee import Employee
+from flask import Blueprint
+from flask_jwt_extended import jwt_required
 from utils.auth import requires_admin, requires_auth
-from utils.token_blacklist import blacklist
-from datetime import timedelta
+from services import auth_service 
 
 auth_bp = Blueprint("auth", __name__)
 
+
+# Initialize first Admin User if db is empty
 @auth_bp.post("/initialize")
 def initialize_admin():
-    session = SessionLocal()
+    return auth_service .initialize_admin()
+    
 
-    # Check if any user already exists
-    existing_user = session.query(Employee).first()
-    if existing_user:
-        return jsonify({"error": "Setup already completed. Admin exists."}), 403
-
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
-
-    admin = Employee(
-        email=email,
-        password_hash=generate_password_hash(password),
-        is_admin=True
-    )
-
-    session.add(admin)
-    session.commit()
-
-    return jsonify({"message": "Initial admin created successfully"}), 201
-
+# Login
 @auth_bp.post("/login", endpoint="login")
 def login():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
+    return auth_service.login()
 
-    with SessionLocal() as session:
-        user = session.query(Employee).filter_by(email=email).first()
 
-        if not user or not check_password_hash(user.password_hash, password):
-            return jsonify({"error": "Invalid credentials"}), 401
-
-        token = create_access_token(
-        identity=str(user.id),
-        additional_claims={"is_admin": user.is_admin},
-        expires_delta=timedelta(hours=1)
-    )
-        return jsonify({"access_token": token}), 200
-
+# Add new users
 @auth_bp.post("/register", endpoint="register_users")
 @requires_admin
 def register_user():
-    # Check is there ia a file
-    file = request.files.get("file")
-
-    # CSV UPLOAD MODE
-    if file:
-        # Check file uin text mode
-        wrapped_file = TextIOWrapper(file, encoding='utf-8')
-        reader = csv.DictReader(wrapped_file)
-
-        created_count = 0
-        skipped_duplicates = 0
-
-        with SessionLocal() as session:
-            for row in reader:
-                email = row.get("Employee Email")
-                password = row.get("Employee Password")
-                is_admin_raw = row.get("is_admin", "false").strip().lower()
-
-                # Convert in boolean
-                is_admin = is_admin_raw in ["true", "1", "yes"]
-
-                if not email or not password:
-                    # Skip, not valid
-                    continue
-
-                existing = session.query(Employee).filter_by(email=email).first()
-                if existing:
-                    skipped_duplicates += 1
-                    continue
-
-                user = Employee(
-                    email=email,
-                    password_hash=generate_password_hash(password),
-                    is_admin=is_admin
-                )
-
-                session.add(user)
-                created_count += 1
-
-            session.commit()
-
-        return jsonify({
-            "message": "Bulk import completed",
-            "created": created_count,
-            "duplicates_skipped": skipped_duplicates
-        }), 201
-
-    # SINGLE USER JSON MODE
-
-    data = request.json
-
-    if not data.get("email") or not data.get("password"):
-        return jsonify({"error": "Email and password are required"}), 400
-
-    with SessionLocal() as session:
-        # check if email exist
-        existing = session.query(Employee).filter_by(email=data["email"]).first()
-        if existing:
-            return jsonify({"error": "User with this email already exists"}), 409
-
-        user = Employee(
-            email=data["email"],
-            password_hash=generate_password_hash(data["password"]),
-            is_admin=data.get("is_admin", False)
-        )
-
-        session.add(user)
-        session.commit()
-
-        return jsonify({
-            "id": user.id,
-            "email": user.email,
-            "is_admin": user.is_admin
-        }), 201
-
+    return auth_service.register_user()
+    
+# Logout
 @auth_bp.post("/logout", endpoint="logout")
 @requires_auth
 @jwt_required()
 def logout():
-    jti = get_jwt()["jti"]
-    blacklist.add(jti)
-    return jsonify({"msg": "Successfully logged out"}), 200
+    return auth_service.logout()
+    

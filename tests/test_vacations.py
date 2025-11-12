@@ -107,7 +107,6 @@ def test_create_vacation_total_csv_some_missing(test_client, create_test_user, m
 
 
 def test_update_vacation_total_success(test_client, create_test_user, make_token, db_session):
-    # Kreiramo korisnika i VacationTotal
     user = create_test_user(email="update@test.com")
     vt = VacationTotal(employee_id=user.id, year=2025, total_days=20, total_days_left=20)
 
@@ -137,7 +136,7 @@ def test_update_vacation_total_missing_fields(test_client, create_test_user, mak
     token = make_token(user.id, is_admin=True)
     headers = {"Authorization": f"Bearer {token}"}
 
-    payload = {"user_id": user.id}  # nedostaju year i added_days
+    payload = {"user_id": user.id}  # missing year and added_days
     response = test_client.patch("/vacations/totals", json=payload, headers=headers)
     assert response.status_code == 400
     data = response.get_json()
@@ -148,7 +147,7 @@ def test_update_vacation_total_not_found(test_client, create_test_user, make_tok
     token = make_token(user.id, is_admin=True)
     headers = {"Authorization": f"Bearer {token}"}
 
-    payload = {"user_id": user.id, "year": 2025, "added_days": 5}  # VacationTotal ne postoji
+    payload = {"user_id": user.id, "year": 2025, "added_days": 5}  # no VacationTotal
     response = test_client.patch("/vacations/totals", json=payload, headers=headers)
     assert response.status_code == 404
     data = response.get_json()
@@ -160,7 +159,6 @@ def test_update_vacation_total_not_found(test_client, create_test_user, make_tok
 
 def test_add_vacation_used_success(test_client, create_test_user, make_token, db_session):
     user = create_test_user(email="used@test.com")
-    # Kreiramo VacationTotal
     vt = VacationTotal(employee_id=user.id, year=2025, total_days=20, total_days_left=20)
 
     db_session.add(vt)
@@ -211,7 +209,6 @@ def test_add_vacation_used_overlap(test_client, create_test_user, make_token, db
     db_session.add(vt)
     db_session.commit()
 
-    # Postojeći odmor
     vu = VacationUsed(employee_id=user.id, start_date=date(2025, 7, 1), end_date=date(2025, 7, 5), days_used=5)
     db_session.add(vu)
     db_session.commit()
@@ -254,7 +251,7 @@ def test_add_vacation_used_no_vacation_total(test_client, create_test_user, make
 
 def test_get_vacation_overview_success(test_client, create_test_user, make_token, db_session):
     user = create_test_user(email="overview@test.com")
-    # Dodajemo VacationTotal zapise
+
     vt1 = VacationTotal(employee_id=user.id, year=2025, total_days=20, total_days_left=15)
     vt2 = VacationTotal(employee_id=user.id, year=2026, total_days=25, total_days_left=25)
     db_session.add_all([vt1, vt2])
