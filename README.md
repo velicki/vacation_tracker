@@ -962,6 +962,18 @@ How to upload a CSV file in Postman:
 
 Description: Bulk create users.
 
+Format of CSV file:
+
+```bash
+Employee Email,Employee Password
+user1@rbt.rs,Abc!@#$
+user2@rbt.rs,Abc!@#$
+user3@rbt.rs,Abc!@#$,true
+user4@rbt.rs,Abc!@#$,false
+```
+
+- The **is_admin** field is optional (defaults to **false**).
+
 Response Example:
 
 ```json
@@ -976,6 +988,16 @@ Response Example:
 
 Description: Bulk upload total vacation days for employees.
 CSV format: First row should contain the year, second row headers like **Employee,Total vacation days**.
+
+Format of CSV file:
+
+```bash
+Vacation year,2019
+Employee,Total vacation days
+user1@rbt.rs,30
+user2@rbt.rs,25
+user3@rbt.rs,28
+```
 
 Response Example:
 
@@ -995,6 +1017,17 @@ Description: Bulk upload vacation usage records for employees.
 - Automatically calculates workdays (excludes weekends).
 
 - Skips entries if the employee does not exist, does not have vacation total for the year, overlaps with existing vacations, or lacks enough remaining days.
+
+Format of CSV file:
+
+```bash
+Employee,Vacation start date,Vacation end date
+user1@rbt.rs,"Friday, August 30, 2019","Wednesday, September 11, 2019"
+user1@rbt.rs,"Thursday, October 24, 2019","Thursday, October 24, 2019"
+user1@rbt.rs,"Friday, November 22, 2019","Friday, November 22, 2019"
+user1@rbt.rs,"Monday, March 9, 2020","Monday, March 9, 2020"
+user1@rbt.rs,"Monday, May 25, 2020","Thursday, May 28, 2020"
+```
 
 Response Example:
 
